@@ -20,6 +20,15 @@ jobs:
       - name: Find newly added template files
         id: detect_new_templates
         run: |
+          echo "=== DEBUG INFO ==="
+          echo "GITHUB_SHA: ${{ github.sha }}"
+          echo "github.event.before: ${{ github.event.before }}"
+          echo "GITHUB_REF: ${{ github.ref }}"
+          echo "=== Git Log ==="
+          git log --oneline -5
+          echo "=== Changed Files ==="
+          git diff --name-status HEAD~1 HEAD || echo "First commit or no previous commit"
+          
           # Get the comparison base
           if [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
             base="${{ github.event.before }}"
@@ -27,14 +36,16 @@ jobs:
             base="$(git rev-parse HEAD~1 2>/dev/null || echo 'HEAD')"
           fi
           
+          echo "Base commit: $base"
+          
           # Detect new image files
           added_files=$(git diff --name-status "$base" HEAD 2>/dev/null | awk '$1 == "A" && $2 ~ /\.(png|jpe?g|webp|avif|svg)$/ { print $2 }' | sort | uniq)
+          
+          echo "Added files detected: $added_files"
           
           echo "added_files<<EOF" >> "$GITHUB_OUTPUT"
           echo "$added_files" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
-          
-          echo "Found added files: $added_files"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -113,10 +124,67 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
           if [ -z "$DISCORD_WEBHOOK_URL" ]; then
-            exit 0
+            echo "ERROR: DISCORD_WEBHOOK_URL is not configured."
+            exit 1
           fi
 
-          # Upload screenshot as attachment
-          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
-            -F "file=@screenshot.png" \
-            -F "payload_json={\"content\":\"Latest preview screenshot\"}"
+          echo "Webhook URL configured: Yes"
+          files="${{ steps.detect_new_templates.outputs.added_files }}"
+          echo "Files to report: $files"
+          
+          # Create embed message
+          embed_json=$(cat <<'EMBED_EOF'
+          {
+            "embeds": [
+              {
+                "title": "✨ New Template Update",
+                "description": "New template files detected in the repository",
+                "color": 5793266,
+                "fields": [
+                  {
+                    "name": "Repository",
+                    "value": "${{ github.repository }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "Commit",
+                    "value": "[${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})",
+                    "inline": false
+                  },
+                  {
+                    "name": "Added Files",
+                    "value": "```$files```",
+                    "inline": false
+                  }
+                ],
+                "footer": {
+                  "text": "GitHub Actions"
+                }
+              }
+            ]
+          }
+          EMBED_EOF
+          )
+          
+          echo "Payload: $embed_json"
+          
+          # Send to Discord
+          response=$(curl -s -w "\n%{http_code}" -X POST "$DISCORD_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$embed_json")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+          
+          echo "HTTP Response Code: $http_code"
+          echo "Response Body: $body"
+          
+          if [ "$http_code" != "204" ] && [ "$http_code" != "200" ]; then
+            echo "ERROR: Discord webhook returned HTTP $http_code"
+            exit 1
+          fi
