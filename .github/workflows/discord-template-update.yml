@@ -9,35 +9,114 @@ on:
 jobs:
   discord_notification:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.0
         with:
           fetch-depth: 0
 
       - name: Find newly added template files
         id: detect_new_templates
         run: |
-          echo "Checking added files between $GITHUB_SHA and ${{ github.event.before }}"
-          git fetch --depth=0 origin ${{ github.ref }} || true
-          added_files=$(git diff --name-status ${{ github.event.before }} ${{ github.sha }} | awk '$1 == "A" { print $2 }' | grep -E '^(public/.*\.(png|jpe?g|webp|avif|svg)$|content/templates/.*\.json$)' || true)
+          # Get the comparison base
+          if [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            base="${{ github.event.before }}"
+          else
+            base="$(git rev-parse HEAD~1 2>/dev/null || echo 'HEAD')"
+          fi
+          
+          # Detect new image files
+          added_files=$(git diff --name-status "$base" HEAD 2>/dev/null | awk '$1 == "A" && $2 ~ /\.(png|jpe?g|webp|avif|svg)$/ { print $2 }' | sort | uniq)
+          
           echo "added_files<<EOF" >> "$GITHUB_OUTPUT"
           echo "$added_files" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
+          
+          echo "Found added files: $added_files"
 
-      - name: Send Discord notification
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        if: steps.detect_new_templates.outputs.added_files != ''
+        run: |
+          npm install -g puppeteer
+
+      - name: Generate screenshot
+        if: steps.detect_new_templates.outputs.added_files != ''
+        run: |
+          node screenshot.js || echo "Screenshot generation skipped"
+
+      - name: Upload screenshot to Discord
         if: steps.detect_new_templates.outputs.added_files != ''
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
           if [ -z "$DISCORD_WEBHOOK_URL" ]; then
-            echo "DISCORD_WEBHOOK_URL is not configured. Skipping Discord notification."
+            echo "DISCORD_WEBHOOK_URL is not configured."
             exit 0
           fi
 
-          message=":sparkles: New template update detected!\n\nAdded files:\n${{ steps.detect_new_templates.outputs.added_files }}"
-          payload=$(jq -n --arg content "$message" '{content: $content}')
-
+          files="${{ steps.detect_new_templates.outputs.added_files }}"
+          
+          # Create embed message
+          embed_json=$(cat <<'EMBED_EOF'
+          {
+            "embeds": [
+              {
+                "title": "✨ New Template Update",
+                "description": "New template files detected in the repository",
+                "color": 5793266,
+                "fields": [
+                  {
+                    "name": "Repository",
+                    "value": "${{ github.repository }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "Commit",
+                    "value": "[${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})",
+                    "inline": false
+                  },
+                  {
+                    "name": "Added Files",
+                    "value": "```$files```",
+                    "inline": false
+                  }
+                ],
+                "footer": {
+                  "text": "GitHub Actions"
+                }
+              }
+            ]
+          }
+          EMBED_EOF
+          )
+          
+          # Send to Discord
           curl -s -X POST "$DISCORD_WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
-            -d "$payload"
+            -d "$embed_json"
+
+      - name: Upload screenshot file
+        if: steps.detect_new_templates.outputs.added_files != '' && hashFiles('screenshot.png') != ''
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            exit 0
+          fi
+
+          # Upload screenshot as attachment
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -F "file=@screenshot.png" \
+            -F "payload_json={\"content\":\"Latest preview screenshot\"}"
