@@ -22,11 +22,34 @@ jobs:
           exit 1
         fi
         
-        echo "🚀 Sending text and uploading screenshot to Discord..."
+        # ป้องกันปัญหา Quote ซ้อนด้วยการประกาศตัวแปร PAYLOAD แบบ EOF
+        PAYLOAD=$(cat <<EOF
+        {
+          "thread_name": "deploy-${{ github.run_id }}",
+          "embeds": [
+            {
+              "title": "🎉 Template Update - New Deploy",
+              "description": "Latest update of the template website. Preview attached below.",
+              "color": 5793266,
+              "fields": [
+                {
+                  "name": "Repository",
+                  "value": "${{ github.repository }}",
+                  "inline": true
+                },
+                {
+                  "name": "Branch",
+                  "value": "${{ github.ref_name }}",
+                  "inline": true
+                }
+              ]
+            }
+          ]
+        }
+        EOF
+        )
         
-        # ปรับมาใช้ Single Quote ('...') ครอบข้อมูล payload_json ทั้งชุดไปเลย เพื่อล็อกฟอร์แมต JSON ให้เสถียร
-        curl -s -X POST "${DISCORD_WEBHOOK_URL}?thread_id=1148281134267420783" \
+        # ยิง curl ส่งไฟล์ภาพพร้อมก้อน PAYLOAD JSON สั่งเปิดกระทู้ใหม่ทันที
+        curl -s -X POST "$DISCORD_WEBHOOK_URL" \
           -F "file=@screenshot.png" \
-          -F 'payload_json={"embeds": [{"title": "🎉 Template Update - New Deploy", "description": "Latest update of the template website. Preview attached below.", "color": 5793266, "fields": [{"name": "Repository", "value": "'"${{ github.repository }}"'", "inline": true}, {"name": "Branch", "value": "'"${{ github.ref_name }}"'", "inline": true}]}]}'
-          
-        echo "✅ Done!"
+          -F "payload_json=$PAYLOAD"
