@@ -22,13 +22,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Playwright
-        run: |
-          npm install -g playwright
-
-      - name: Generate screenshot
-        run: |
-          node screenshot.js || echo "Screenshot generation completed"
+      # Using existing screenshot.png from the repository instead of generating
+      # a new screenshot in CI to avoid supply-chain and environment issues.
 
       - name: Check for screenshot file
         id: check_screenshot
