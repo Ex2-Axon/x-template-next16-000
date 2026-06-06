@@ -4,95 +4,29 @@ on:
   push:
     branches:
       - main
-      - master
 
 jobs:
   notify_discord:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+    # 1. สำคัญมาก! ต้องดึงไฟล์จาก Repo ลงเครื่องก่อน
+    - uses: actions/checkout@v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: '20'
-
-      # Using existing screenshot.png from the repository instead of generating
-      # a new screenshot in CI to avoid supply-chain and environment issues.
-
-      - name: Check for screenshot file
-        id: check_screenshot
-        run: |
-          if [ -f screenshot.png ]; then
-            echo "screenshot_exists=true" >> "$GITHUB_OUTPUT"
-            ls -lh screenshot.png
-          else
-            echo "screenshot_exists=false" >> "$GITHUB_OUTPUT"
-            echo "Screenshot not found"
-          fi
-
-      - name: Send Discord notification with screenshot
-        if: steps.check_screenshot.outputs.screenshot_exists == 'true'
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
-            echo "ERROR: DISCORD_WEBHOOK_URL not configured"
-            exit 1
-          fi
-
-          echo "🚀 Sending notification to Discord..."
+    # 2. สั่งยิงข้อความและส่งไฟล์ภาพเข้า Discord ทันที (ไม่ต้องเช็กเงื่อนไขแล้ว)
+    - name: Send Discord Notification with Screenshot
+      env:
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      run: |
+        if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+          echo "ERROR: DISCORD_WEBHOOK_URL is missing!"
+          exit 1
+        fi
+        
+        echo "🚀 Sending text and uploading screenshot to Discord..."
+        
+        # ส่งภาพไปที่ Webhook ตรงๆ
+        curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+          -F "file=@screenshot.png" \
+          -F "payload_json={\"embeds\": [{\"title\": \"🎉 Template Update - New Deploy\", \"description\": \"Latest update of the template website. Preview attached below.\", \"color\": 5793266, \"fields\": [{\"name\": \"Repository\", \"value\": \"${{ github.repository }}\", \"inline\": true}, {\"name\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"inline\": true}]}]}"
           
-          # Create and send embed message
-          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
-            -H 'Content-Type: application/json' \
-            -d '{
-              "embeds": [
-                {
-                  "title": "🎉 Template Update - New Deploy",
-                  "description": "Latest screenshot of the template website",
-                  "color": 5793266,
-                  "fields": [
-                    {
-                      "name": "Repository",
-                      "value": "${{ github.repository }}",
-                      "inline": true
-                    },
-                    {
-                      "name": "Branch",
-                      "value": "${{ github.ref_name }}",
-                      "inline": true
-                    },
-                    {
-                      "name": "Commit",
-                      "value": "[${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})",
-                      "inline": false
-                    },
-                    {
-                      "name": "Author",
-                      "value": "${{ github.actor }}",
-                      "inline": true
-                    }
-                  ],
-                  "footer": {
-                    "text": "GitHub Actions"
-                  }
-                }
-              ]
-            }'
-          
-          sleep 2
-          
-          # Send screenshot as attachment
-          echo "📸 Uploading screenshot..."
-          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
-            -F "file=@screenshot.png" \
-            -F "payload_json={\"content\":\"📷 Latest preview\"}"
-          
-          echo ""
-          echo "✅ Discord notification sent!"
+        echo "✅ Done!"
