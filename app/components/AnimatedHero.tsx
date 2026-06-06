@@ -20,10 +20,10 @@ export default function AnimatedHero() {
               เทมเพลตเว็บไซต์ขาย 5,000 บาท พร้อมอัปเดทรูปอัตโนมัติ
             </div>
             <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-              สร้าง Gallery เทมเพลต ด้วยภาพใน <span className="text-primary">public/</span> แล้วเว็บจะอัปเดทเอง
+              เลือกเว็บ template Next.js ที่ชื่นชอบ เรารับ ออกแบบ แก้ไขปรับแต่งเว็บไซต์
             </h1>
             <p className="max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
-              เพิ่มรูปภาพใหม่เข้าไปในโฟลเดอร์และระบบจะตรวจจับโดยอัตโนมัติ พร้อมหน้า Detail ที่มีลิงก์ชำระเงิน, ตัวอย่าง Vercel และ GitHub ครบทุกชิ้นงาน.
+              บริการปรับแต่งและออกแบบเทมเพลต Next.js พร้อมสาธิตหน้าเว็บตัวอย่างและลิงก์ชำระเงินครบถ้วน.
             </p>
           </div>
 

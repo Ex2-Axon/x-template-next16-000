@@ -1,0 +1,43 @@
+name: Notify Discord on New Template
+
+on:
+  push:
+    paths:
+      - 'public/**'
+      - 'content/templates/**'
+
+jobs:
+  discord_notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find newly added template files
+        id: detect_new_templates
+        run: |
+          echo "Checking added files between $GITHUB_SHA and ${{ github.event.before }}"
+          git fetch --depth=0 origin ${{ github.ref }} || true
+          added_files=$(git diff --name-status ${{ github.event.before }} ${{ github.sha }} | awk '$1 == "A" { print $2 }' | grep -E '^(public/.*\.(png|jpe?g|webp|avif|svg)$|content/templates/.*\.json$)' || true)
+          echo "added_files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$added_files" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Send Discord notification
+        if: steps.detect_new_templates.outputs.added_files != ''
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "DISCORD_WEBHOOK_URL is not configured. Skipping Discord notification."
+            exit 0
+          fi
+
+          message=":sparkles: New template update detected!\n\nAdded files:\n${{ steps.detect_new_templates.outputs.added_files }}"
+          payload=$(jq -n --arg content "$message" '{content: $content}')
+
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$payload"

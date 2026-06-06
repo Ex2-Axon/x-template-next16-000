@@ -6,8 +6,9 @@ import { getTemplateBySlug } from "@/lib/image-utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function TemplateDetail({ params }: { params: { slug: string } }) {
-  const template = await getTemplateBySlug(params.slug);
+export default async function TemplateDetail({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const template = await getTemplateBySlug(slug);
 
   if (!template) {
     notFound();
@@ -44,14 +45,40 @@ export default async function TemplateDetail({ params }: { params: { slug: strin
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-6">
                 <div className="rounded-4xl border border-border bg-surface-muted p-6">
-                  <p className="text-sm uppercase tracking-[0.28em] text-primary">ชื่อ</p>
-                  <p className="mt-4 text-sm leading-7 text-slate-300">{template.title}</p>
+                  <p className="text-sm uppercase tracking-[0.28em] text-primary">รายละเอียดเพิ่มเติม</p>
+                  <p className="mt-4 text-sm leading-7 text-slate-300">{template.longDescription}</p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-4xl border border-border bg-surface-muted p-6">
+                    <p className="text-sm uppercase tracking-[0.28em] text-primary">จุดเด่น</p>
+                    <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
+                      {template.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-3">
+                          <span className="mt-1 inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="rounded-4xl border border-border bg-surface-muted p-6">
+                    <p className="text-sm uppercase tracking-[0.28em] text-primary">เหมาะสำหรับ</p>
+                    <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
+                      {template.useCases.map((item) => (
+                        <li key={item} className="flex items-start gap-3">
+                          <span className="mt-1 inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
                 <div className="rounded-4xl border border-border bg-surface-muted p-6">
-                  <p className="text-sm uppercase tracking-[0.28em] text-primary">slug</p>
-                  <p className="mt-4 wrap-break-word text-sm leading-7 text-slate-300">{template.slug}</p>
+                  <p className="text-sm uppercase tracking-[0.28em] text-primary">ข้อมูลการใช้งาน</p>
+                  <p className="mt-4 text-sm leading-7 text-slate-300">
+                    เปิดแพลนหน้าเว็บไซต์ของคุณได้ทันทีโดยวางรูปภาพใน <span className="font-semibold text-white">public/</span> และเชื่อมลิงก์เว็บตัวอย่างกับ GitHub ของแต่ละเทมเพลต.
+                  </p>
                 </div>
               </div>
             </div>
@@ -61,7 +88,7 @@ export default async function TemplateDetail({ params }: { params: { slug: strin
                 <p className="text-sm uppercase tracking-[0.28em] text-primary">ลิงก์ที่สำคัญ</p>
                 <div className="mt-6 space-y-4">
                   <a
-                    href="https://microtronic-thailand.github.io/micro-payment/"
+                    href={template.paymentLink}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center justify-between gap-3 rounded-3xl border border-primary/20 bg-primary/5 px-5 py-4 text-sm font-semibold text-white transition hover:bg-primary/10"

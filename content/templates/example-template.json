@@ -1,0 +1,17 @@
+{
+  "description": "เทมเพลตสาธิตสำหรับหน้า Landing Page พร้อมระบบชำระเงินและลิงก์สำคัญ",
+  "longDescription": "เทมเพลตนี้ออกแบบมาเพื่อผู้ประกอบการและครีเอเตอร์ที่ต้องการหน้า Landing Page แบบครบจบในหน้าเดียว พร้อมปุ่ม CTA ชำระเงินที่เด่นชัดและส่วนสรุปจุดเด่นธุรกิจ.",
+  "features": [
+    "ดีไซน์หน้ากระดาษเดียว - Landing Page",
+    "รองรับมือถือและเดสก์ท็อปอย่างเต็มรูปแบบ",
+    "แสดงปุ่มชำระเงินและลิงก์ตัวอย่างทันที"
+  ],
+  "useCases": [
+    "ขายคอร์สออนไลน์",
+    "โปรโมทสินค้าและบริการ",
+    "นำเสนอผลงานสร้างแบรนด์"
+  ],
+  "paymentLink": "https://microtronic-thailand.github.io/micro-payment/",
+  "vercelLink": "https://example-template.vercel.app/",
+  "githubLink": "https://github.com/Ex2-Axon/example-template"
+}
