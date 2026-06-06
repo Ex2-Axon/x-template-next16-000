@@ -24,9 +24,9 @@ jobs:
         
         echo "🚀 Sending text and uploading screenshot to Discord..."
         
-        # ปรับตรงเงื่อนไขลิงก์ โดยเติม ?thread_id=... ต่อท้ายตัวแปร URL
+        # ปรับมาใช้ซิงเกิ้ลโควต ครอบตัวแปร JSON ดิบๆ ด้านล่างนี้แทนครับ
         curl -s -X POST "${DISCORD_WEBHOOK_URL}?thread_id=1148281134267420783" \
           -F "file=@screenshot.png" \
-          -F "payload_json={\"embeds\": [{\"title\": \"🎉 Template Update - New Deploy\", \"description\": \"Latest update of the template website. Preview attached below.\", \"color\": 5793266, \"fields\": [{\"name\": \"Repository\", \"value\": \"${{ github.repository }}\", \"inline\": true}, {\"name\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"inline\": true}]}]}"
+          -F 'payload_json={"embeds": [{"title": "🎉 Template Update - New Deploy", "description": "Latest update of the template website. Preview attached below.", "color": 5793266, "fields": [{"name": "Repository", "value": "'"${{ github.repository }}"'", "inline": true}, {"name": "Branch", "value": "'"${{ github.ref_name }}"'", "inline": true}]}]}'
           
         echo "✅ Done!"
