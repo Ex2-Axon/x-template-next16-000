@@ -19,13 +19,11 @@ jobs:
       - name: Setup pnpm
         run: corepack enable && corepack prepare pnpm@latest --activate
 
+      # ❌ ลบโค้ดบรรทัด 22-28 ของเดิมออก แล้วแทนที่ด้วย 3 บรรทัดนี้ครับ:
       - name: Install dependencies
         run: |
-          # Some CI supply-chain policies reject very newly published packages.
-          # Try installing while bypassing store-package verification to avoid
-          # [ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION] in CI. If that fails,
-          # fall back to a standard install to surface errors.
-          pnpm install --no-verify-store-packages || pnpm install
+          pnpm clean --lockfile
+          pnpm install
 
       - name: Install Playwright browser
         run: pnpm exec playwright install chromium
