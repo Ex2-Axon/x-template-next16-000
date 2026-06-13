@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 export type TemplateContent = {
@@ -23,6 +23,7 @@ export type TemplateInfo = {
   paymentLink: string;
   vercelLink: string;
   githubLink: string;
+  mtime: number;
 };
 
 const imageExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"]);
@@ -50,6 +51,8 @@ async function createTemplateInfo(filename: string): Promise<TemplateInfo> {
   const slug = path.basename(filename, ext);
   const title = slugToTitle(slug);
   const content = await loadTemplateContent(slug);
+  const filePath = path.join(process.cwd(), "public", filename);
+  const fileStats = await stat(filePath);
 
   const defaultFeatures = [
     "หน้า Landing page Animation ที่สวยงาม",
@@ -76,6 +79,7 @@ async function createTemplateInfo(filename: string): Promise<TemplateInfo> {
     paymentLink: content.paymentLink ?? "https://microtronic-thailand.github.io/micro-payment/",
     vercelLink: content.vercelLink ?? `https://${slug}.vercel.app/`,
     githubLink: content.githubLink ?? `https://github.com/Ex2-Axon/${slug}`,
+    mtime: fileStats.mtimeMs,
   };
 }
 
@@ -92,7 +96,7 @@ export async function getTemplateImages(): Promise<TemplateInfo[]> {
       .map(createTemplateInfo)
   );
 
-  return templates.sort((a, b) => a.title.localeCompare(b.title, "th"));
+  return templates.sort((a, b) => b.mtime - a.mtime);
 }
 
 export async function getTemplateBySlug(slug: string): Promise<TemplateInfo | undefined> {
